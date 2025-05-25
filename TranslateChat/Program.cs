@@ -97,7 +97,7 @@ async Task HandleWebSocketConnection(User user, WebSocket webSocket, ILifetimeSc
         new ArraySegment<byte>(buffer), CancellationToken.None);
     await using var scope = lifetimeScope.BeginLifetimeScope();
     var logger = LogManager.GetCurrentClassLogger();
-    if (!chatRooms.ContainsKey(user.Language))
+    if (!chatRooms.TryGetValue(user.Language, out var curRoom))
     {
         logger.Warn($"No chat room found for language {user.Language}");
         return;
@@ -106,7 +106,7 @@ async Task HandleWebSocketConnection(User user, WebSocket webSocket, ILifetimeSc
     var welcomeMessage = $"Welcome, {user.Name}! You are now connected to the chat.";
     try
     {
-        await chatRooms[user.Language].AddUser(user);
+        await curRoom.AddUser(user);
         var exTasks = new List<Task<Exception?>>();
         foreach (var room in chatRooms.Values)
         {
@@ -126,6 +126,11 @@ async Task HandleWebSocketConnection(User user, WebSocket webSocket, ILifetimeSc
         {
             var message = Encoding.UTF8.GetString(buffer, 0, receiveResult.Count);
 
+            var ex = await curRoom.BroadcastMessage(new ChatMessage(user, message));
+            if (ex != null)
+            {
+                logger.Error($"Error broadcasting message: {ex.Message}");
+            }
 
             receiveResult = await webSocket.ReceiveAsync(
                 new ArraySegment<byte>(buffer), CancellationToken.None);
