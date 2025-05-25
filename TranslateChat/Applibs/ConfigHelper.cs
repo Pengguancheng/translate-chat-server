@@ -27,4 +27,6 @@ public static class ConfigHelper
     public static string Env => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")!;
 
     public static List<string> ChatLanguages => Config.GetSection("ChatLanguages").Get<List<string>>()!;
+
+    public static string TranslatorUrl => Config.GetValue<string>("TranslatorUrl")!;
 }

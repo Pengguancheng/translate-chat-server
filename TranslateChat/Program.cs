@@ -33,7 +33,7 @@ builder.WebHost.UseKestrel(options => { options.ListenAnyIP(port); });
 var chatRooms = new ConcurrentDictionary<string, ChatRoom>();
 foreach (var lang in ConfigHelper.ChatLanguages)
 {
-    chatRooms[lang] = new ChatRoom(lang);
+    chatRooms[lang] = new ChatRoom(lang, ConfigHelper.TranslatorUrl);
 }
 
 builder.Host.UseNLog();
@@ -81,7 +81,8 @@ app.Map("/ws", async (context) =>
         using var ws = await context.WebSockets.AcceptWebSocketAsync();
 
         var user = new User(userId, userName, userLanguage, ws);
-        LogManager.GetCurrentClassLogger().Info($"Started WebSocket connection for user {JsonConvert.SerializeObject(user)}");
+        LogManager.GetCurrentClassLogger()
+            .Info($"Started WebSocket connection for user {JsonConvert.SerializeObject(user)}");
         await HandleWebSocketConnection(user, ws, lifetimeScope);
     }
     else
@@ -117,6 +118,18 @@ async Task HandleWebSocketConnection(User user, WebSocket webSocket, ILifetimeSc
             if (ex != null)
             {
                 logger.Error($"Error broadcasting message: {ex.Message}");
+            }
+
+            foreach (var chatRoom in chatRooms)
+            {
+                if (chatRoom.Key != user.Language)
+                {
+                    var translateEx = await chatRoom.Value.BroadcastTranslatedMessage(new ChatMessage(user, message));
+                    if (translateEx != null)
+                    {
+                        logger.Error($"Error broadcasting translated message: {translateEx.Message}");
+                    }
+                }
             }
 
             receiveResult = await webSocket.ReceiveAsync(
