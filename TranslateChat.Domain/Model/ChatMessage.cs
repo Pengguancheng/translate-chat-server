@@ -1,5 +1,6 @@
 using System;
-using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace TranslateChat.Domain.Model;
 
@@ -20,5 +21,15 @@ public class ChatMessage
         OriginalLanguage = sender.Language;
         Sender = sender;
         Timestamp = DateTime.UtcNow;
+    }
+
+    public string ToJsonString()
+    {
+        var settings = new JsonSerializerSettings
+        {
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            Formatting = Formatting.None
+        };
+        return JsonConvert.SerializeObject(this, settings);
     }
 }

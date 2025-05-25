@@ -105,24 +105,9 @@ async Task HandleWebSocketConnection(User user, WebSocket webSocket, ILifetimeSc
         return;
     }
 
-    var welcomeMessage = $"Welcome, {user.Name}! You are now connected to the chat.";
     try
     {
         await curRoom.AddUser(user);
-        var exTasks = new List<Task<Exception?>>();
-        foreach (var room in chatRooms.Values)
-        {
-            var msg = new ChatMessage(user, welcomeMessage);
-            exTasks.Add(room.BroadcastMessage(msg));
-        }
-
-        await Task.WhenAll(exTasks);
-        var exList = exTasks.Select(x => x.Result).Where(x => x != null).ToList();
-        if (exList.Count > 0)
-        {
-            logger.Error(
-                $"Error broadcasting welcome message to chat rooms: {string.Join(", ", exList.Select(x => x.Message))}");
-        }
 
         while (!receiveResult.CloseStatus.HasValue)
         {

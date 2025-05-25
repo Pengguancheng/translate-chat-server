@@ -29,7 +29,8 @@ public class User
         {
             throw new InvalidOperationException("WebSocket is not open.");
         }
-        var msgStr = JsonConvert.SerializeObject(message);
+
+        var msgStr = message.ToJsonString();
 
         var buffer = Encoding.UTF8.GetBytes(msgStr);
         var segment = new ArraySegment<byte>(buffer);
