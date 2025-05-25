@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using NLog;
 using NLog.Extensions.Logging;
 using NLog.Web;
@@ -80,6 +81,7 @@ app.Map("/ws", async (context) =>
         using var ws = await context.WebSockets.AcceptWebSocketAsync();
 
         var user = new User(userId, userName, userLanguage, ws);
+        LogManager.GetCurrentClassLogger().Info($"Started WebSocket connection for user {JsonConvert.SerializeObject(user)}");
         await HandleWebSocketConnection(user, ws, lifetimeScope);
     }
     else

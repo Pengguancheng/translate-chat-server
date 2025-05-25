@@ -20,6 +20,7 @@ public class User
     public string Id { get; set; }
     public string Name { get; set; }
     public string Language { get; set; }
+    [JsonIgnore]
     public WebSocket WebSocket { get; set; }
 
     public async Task SendMessage(ChatMessage message)
