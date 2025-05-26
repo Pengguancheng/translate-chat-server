@@ -10,6 +10,7 @@ using NLog.Extensions.Logging;
 using NLog.Web;
 using TranslateChat.Applibs;
 using TranslateChat.Domain.Model;
+using TranslateChat.Model;
 
 // See https://aka.ms/new-console-template for more information
 
@@ -53,6 +54,17 @@ var app = builder.Build();
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     LogManager.GetCurrentClassLogger().Info($"Application is listening on port {port}");
+});
+
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    LogManager.GetCurrentClassLogger().Info("Application is shutting down");
+    var tasks = new List<Task>();
+    foreach (var room in chatRooms.Values)
+    {
+        tasks.Add(room.ClearUsers());
+    }
+    Task.WaitAll(tasks.ToArray());
 });
 
 

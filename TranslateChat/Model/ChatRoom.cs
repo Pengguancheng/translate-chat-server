@@ -1,16 +1,17 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
+using NLog;
+using TranslateChat.Domain.Model;
+using System.Diagnostics;
+using ILogger = NLog.ILogger;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace TranslateChat.Domain.Model;
+namespace TranslateChat.Model;
 
 public class ChatRoom
 {
+    public static ILogger logger = LogManager.GetCurrentClassLogger();
     public string Language { get; set; }
     public string TranslateUrl { get; set; }
     private readonly ConcurrentDictionary<string, User> userDict;
@@ -48,6 +49,16 @@ public class ChatRoom
         return user;
     }
 
+    public async Task ClearUsers()
+    {
+        foreach (var user in userDict.Values)
+        {
+            await user.CloseWebSocket();
+        }
+
+        userDict.Clear();
+    }
+
     public async Task<Exception?> BroadcastMessage(ChatMessage msg)
     {
         try
@@ -72,6 +83,8 @@ public class ChatRoom
     {
         try
         {
+            var stopwatch = Stopwatch.StartNew();
+
             var request =
                 new TranslateRequest(originalMsg.OriginalContent, originalMsg.OriginalLanguage, this.Language);
             var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
@@ -79,12 +92,24 @@ public class ChatRoom
             var response = await _httpClient.PostAsync($"{TranslateUrl}/translate", content);
             response.EnsureSuccessStatusCode();
 
+            var responseTime = stopwatch.Elapsed;
+
             var responseBody = await response.Content.ReadAsStringAsync();
+
             var translatedResponse = JsonSerializer.Deserialize<TranslateResponse>(responseBody)!;
+
+            logger.Trace($"Translated message: {JsonConvert.SerializeObject(new
+            {
+                requestText = request.Text,
+                requestLanguage = request.SourceLanguage,
+                responseText = translatedResponse.TranslatedText,
+                responseLanguage = request.TargetLanguage,
+                translateTime = responseTime.TotalMilliseconds
+            })}");
 
             var msg = new ChatMessage(originalMsg.Sender, originalMsg.OriginalContent)
             {
-                OriginalLanguage = translatedResponse.DetectedLanguage.Language,
+                OriginalLanguage = originalMsg.OriginalLanguage,
                 TranslatedLanguage = this.Language,
                 TranslatedContent = translatedResponse.TranslatedText
             };
