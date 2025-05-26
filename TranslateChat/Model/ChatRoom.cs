@@ -101,6 +101,7 @@ public class ChatRoom
             logger.Trace($"Translated message: {JsonConvert.SerializeObject(new
             {
                 requestText = request.Text,
+                requestLength = request.Text.Length,
                 requestLanguage = request.SourceLanguage,
                 responseText = translatedResponse.TranslatedText,
                 responseLanguage = request.TargetLanguage,
